@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  fastapi:
+    build: ./fastapi
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "3000:3000"
+    env_file: .env
+    depends_on:
+      - fastapi
