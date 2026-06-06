@@ -4,27 +4,32 @@ from fastapi import APIRouter, HTTPException
 import httpx
 
 router = APIRouter()
-FINNHUB_KEY = os.environ.get("FINNHUB_API_KEY", "")
 
 
 @router.get("/sentiment")
 def get_sentiment(ticker: str):
+    finnhub_key = os.environ.get("FINNHUB_API_KEY", "")
     try:
         sent = httpx.get(
             "https://finnhub.io/api/v1/news-sentiment",
-            params={"symbol": ticker, "token": FINNHUB_KEY},
+            params={"symbol": ticker, "token": finnhub_key},
             timeout=10,
         ).json()
+
+        if not isinstance(sent, dict):
+            raise HTTPException(status_code=503, detail="Finnhub sentiment API returned unexpected response")
 
         to_d = datetime.now().strftime("%Y-%m-%d")
         from_d = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
         news = httpx.get(
             "https://finnhub.io/api/v1/company-news",
-            params={"symbol": ticker, "from": from_d, "to": to_d, "token": FINNHUB_KEY},
+            params={"symbol": ticker, "from": from_d, "to": to_d, "token": finnhub_key},
             timeout=10,
         ).json()
 
-        bullish_pct = sent.get("sentiment", {}).get("bullishPercent", 0.5) * 100
+        raw_bullish = sent.get("sentiment", {}).get("bullishPercent", 0.5)
+        raw_bullish = min(1.0, max(0.0, raw_bullish))
+        bullish_pct = raw_bullish * 100
         bearish_pct = 100 - bullish_pct
         article_count = sent.get("buzz", {}).get("articlesInLastWeek", 0)
         finnhub_score = bullish_pct / 100
@@ -58,5 +63,7 @@ def get_sentiment(ticker: str):
                 "top_headlines": headlines,
             },
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
