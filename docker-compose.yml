@@ -5,8 +5,6 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
-    environment:
-      - FINNHUB_API_KEY=${FINNHUB_API_KEY}
 
   dashboard:
     build: ./dashboard
