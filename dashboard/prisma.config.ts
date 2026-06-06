@@ -1,9 +1,8 @@
 import { config } from "dotenv";
-import { resolve } from "path";
 import { defineConfig } from "prisma/config";
 
-// Load .env from project root (one level up from dashboard/)
-config({ path: resolve(__dirname, "../.env") });
+// Relative to process.cwd() (dashboard/), so ../.env is the project root .env
+config({ path: "../.env" });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

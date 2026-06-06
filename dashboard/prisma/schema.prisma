@@ -48,4 +48,6 @@ model AlertRule {
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   lastTriggered DateTime?
+
+  @@index([isActive])
 }
