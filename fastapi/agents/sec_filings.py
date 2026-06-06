@@ -23,16 +23,14 @@ def get_sec_filings(ticker: str):
         if last_10k:
             red_flags = _scan_red_flags(cik, last_10k["accessionNumber"])
 
-        insider_net = form4_count
-
         return {
-            "score": _score(red_flags, insider_net),
-            "signals": _signals(red_flags, insider_net, last_10k, last_10q),
+            "score": _score(red_flags, form4_count),
+            "signals": _signals(red_flags, form4_count, last_10k, last_10q),
             "data": {
                 "last_10k_date": last_10k["filingDate"] if last_10k else None,
                 "last_10q_date": last_10q["filingDate"] if last_10q else None,
                 "red_flags": red_flags,
-                "insider_net_shares": insider_net,
+                "form4_count": form4_count,
             },
         }
     except HTTPException:
@@ -48,6 +46,8 @@ def _get_cik(ticker: str) -> str | None:
         headers=HEADERS,
     ).json()
     for _, co in data.items():
+        if not isinstance(co, dict):
+            continue
         if co.get("ticker", "").upper() == ticker.upper():
             return str(co["cik_str"]).zfill(10)
     return None
@@ -73,8 +73,26 @@ def _get_recent_filings(cik: str) -> list[dict]:
 def _scan_red_flags(cik: str, accession: str) -> list[str]:
     try:
         acc_clean = accession.replace("-", "")
-        url = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc_clean}/{accession}-index.htm"
-        text = httpx.get(url, timeout=15, headers=HEADERS).text.lower()
+        cik_int = int(cik)
+
+        # Fetch the filing index to find the primary document
+        index_url = f"https://data.sec.gov/Archives/edgar/data/{cik_int}/{acc_clean}/index.json"
+        index_data = httpx.get(index_url, timeout=15, headers=HEADERS).json()
+        documents = index_data.get("directory", {}).get("item", [])
+
+        # Find the primary 10-K document (first .htm or .txt that isn't the index itself)
+        doc_name = None
+        for doc in documents:
+            name = doc.get("name", "")
+            if name.endswith((".htm", ".txt")) and "index" not in name.lower():
+                doc_name = name
+                break
+
+        if not doc_name:
+            return []
+
+        doc_url = f"https://www.sec.gov/Archives/edgar/data/{cik_int}/{acc_clean}/{doc_name}"
+        text = httpx.get(doc_url, timeout=20, headers=HEADERS).text.lower()
         return [phrase for phrase in RED_FLAG_PHRASES if phrase in text]
     except Exception:
         return []

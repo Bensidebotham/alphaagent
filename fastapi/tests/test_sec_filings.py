@@ -28,6 +28,12 @@ def test_sec_returns_score_and_data(mock_get):
             m.json.return_value = MOCK_TICKERS
         elif "submissions" in url:
             m.json.return_value = MOCK_SUBMISSIONS
+        elif "index.json" in url:
+            m.json.return_value = {
+                "directory": {
+                    "item": [{"name": "aapl-20241026.htm", "type": "10-K"}]
+                }
+            }
         else:
             m.text = "Annual report with no issues."
         return m
@@ -49,6 +55,12 @@ def test_red_flags_lower_score(mock_get):
             m.json.return_value = MOCK_TICKERS
         elif "submissions" in url:
             m.json.return_value = MOCK_SUBMISSIONS
+        elif "index.json" in url:
+            m.json.return_value = {
+                "directory": {
+                    "item": [{"name": "aapl-20241026.htm", "type": "10-K"}]
+                }
+            }
         else:
             m.text = "going concern material weakness guidance withdrawn"
         return m
