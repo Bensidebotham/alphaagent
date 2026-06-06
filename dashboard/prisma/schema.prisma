@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Research {
+  id             String   @id @default(uuid())
+  ticker         String
+  analyzedAt     DateTime @default(now())
+  status         String
+  overallScore   Float?
+  thesis         String?
+  recommendation String?
+  fundScore      Float?
+  techScore      Float?
+  sentScore      Float?
+  secScore       Float?
+  fundData       Json?
+  techData       Json?
+  sentData       Json?
+  secData        Json?
+  errorMsg       String?
+
+  @@index([ticker, analyzedAt(sort: Desc)])
+}
+
+model Watchlist {
+  id       String   @id @default(uuid())
+  ticker   String   @unique
+  addedAt  DateTime @default(now())
+}
+
+model ScreenerConfig {
+  id        String   @id @default(uuid())
+  name      String
+  filters   Json
+  createdAt DateTime @default(now())
+}
+
+model AlertRule {
+  id            String    @id @default(uuid())
+  name          String
+  filters       Json
+  email         String
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  lastTriggered DateTime?
+}
