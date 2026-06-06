@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException
+import math
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -17,6 +18,8 @@ def get_technical(ticker: str):
         rsi = _rsi(closes, 14)
         ma_50 = float(closes.rolling(50).mean().iloc[-1])
         ma_200 = float(closes.rolling(200).mean().iloc[-1])
+        if any(math.isnan(v) for v in [rsi, ma_50, ma_200]):
+            raise HTTPException(status_code=422, detail=f"Insufficient price history for {ticker}")
         price = float(closes.iloc[-1])
         high_52w = float(hist["High"].max())
         avg_vol_20 = float(hist["Volume"].rolling(20).mean().iloc[-1])
@@ -46,7 +49,7 @@ def _rsi(prices: pd.Series, period: int = 14) -> float:
     delta = prices.diff()
     gain = delta.clip(lower=0).rolling(period).mean()
     loss = (-delta.clip(upper=0)).rolling(period).mean()
-    rs = gain / loss
+    rs = gain / loss.replace(0, float("nan"))
     return float((100 - (100 / (1 + rs))).iloc[-1])
 
 
